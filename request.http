@@ -1,0 +1,29 @@
+### Get the health of the cluster
+GET http://localhost:6000/health
+
+### Create a new category
+POST http://localhost:6000/api/categories
+Content-Type: application/json
+
+{
+  "name": "Elektronik",
+  "description": "Perangkat elektronik seperti ponsel, laptop, dan televisi."
+}
+
+### Get all categories
+GET http://localhost:6000/api/categories
+
+### Get single category by ID
+GET http://localhost:6000/api/categories/1
+
+### Update a category by ID
+PUT http://localhost:6000/api/categories/1
+
+{
+  "name": "Elektronik Updated",
+  "description": "Perangkat elektronik terbaru seperti ponsel, laptop, dan televisi."
+}
+
+### Delete a category by ID
+DELETE http://localhost:6000/api/categories/1
+
