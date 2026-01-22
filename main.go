@@ -100,6 +100,22 @@ func deleteCategory(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"error": "Category not found"})
 }
 
+func createCategory(w http.ResponseWriter, r *http.Request) {
+	// Implementation for creating a new category
+	w.Header().Set("Content-Type", "application/json")
+	var newCategory Category
+	if err := json.NewDecoder(r.Body).Decode(&newCategory); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request payload"})
+		return
+	}
+	newCategory.ID = len(Categories) + 1
+	Categories = append(Categories, newCategory)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(newCategory)
+
+}
+
 func main() {
 
 	// Health Check Endpoint
@@ -114,6 +130,8 @@ func main() {
 	http.HandleFunc("/api/categories", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			getCategories(w)
+		} else if r.Method == http.MethodPost {
+			createCategory(w, r)
 		}
 	})
 
