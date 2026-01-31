@@ -26,4 +26,40 @@ PUT http://localhost:6000/api/categories/1
 
 ### Delete a category by ID
 DELETE http://localhost:6000/api/categories/1
+ 
+### Create a new product
+POST http://localhost:6000/api/products
+Content-Type: application/json
+
+{
+  "name": "iPhone 15 Pro",
+  "description": "Smartphone premium dari Apple",
+  "price": 15999000,
+  "stock": 50,
+  "category_id": 1
+}
+
+### Get all products (with category name)
+GET http://localhost:6000/api/products
+
+### Get single product by ID
+GET http://localhost:6000/api/products/1
+
+### Get products by category ID
+GET http://localhost:6000/api/products?category_id=1
+
+### Update a product by ID
+PUT http://localhost:6000/api/products/1
+Content-Type: application/json
+
+{
+  "name": "iPhone 15 Pro Max",
+  "description": "Smartphone premium terbaru dari Apple",
+  "price": 18999000,
+  "stock": 30,
+  "category_id": 1
+}
+
+### Delete a product by ID
+DELETE http://localhost:6000/api/products/1
 
