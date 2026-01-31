@@ -3,150 +3,129 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"gocats/internal/config"
+	"gocats/internal/database"
+	"gocats/internal/handlers"
+	"gocats/internal/repository"
+	"gocats/internal/services"
+	"gocats/migrations"
+	"log"
 	"net/http"
-	"strconv"
-	"strings"
 )
 
-type Category struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-var Categories = []Category{
-	{ID: 1, Name: "Elektronik", Description: "Perangkat elektronik seperti ponsel, laptop, dan televisi."},
-}
-
-func getCategories(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(Categories)
-}
-
-func getCategoryByID(w http.ResponseWriter, r *http.Request) {
-	// Extract the ID from the path
-	path := strings.TrimPrefix(r.URL.Path, "/api/categories/")
-	id, err := strconv.Atoi(path)
+func main() {
+	cfg, err := config.Load()
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid category ID"})
-		return
+		log.Fatalf("Error loading config: %v", err)
 	}
 
-	for _, category := range Categories {
-		if category.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(category)
-			return
-		}
-	}
+	// Connect to the database
+	db, err := database.New(database.Config{
+		DSN: cfg.Database.DSN,
+	})
 
-	// Category not found
-	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "Category not found"})
-}
-
-func updateCategory(w http.ResponseWriter, r *http.Request) {
-	// Implementation for updating a category
-	w.Header().Set("Content-Type", "application/json")
-	path := strings.TrimPrefix(r.URL.Path, "/api/categories/")
-	id, err := strconv.Atoi(path)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid category ID"})
-		return
+		log.Fatalf("Error connecting to database: %v", err)
 	}
-	var updatedCategory Category
-	if err := json.NewDecoder(r.Body).Decode(&updatedCategory); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request payload"})
-		return
+	defer db.Close()
+
+	// Run database migrations
+	if err := migrations.RunMigrations(db); err != nil {
+		log.Fatalf("Error running migrations: %v", err)
 	}
 
-	for i, category := range Categories {
-		if category.ID == id {
-			Categories[i].Name = updatedCategory.Name
-			Categories[i].Description = updatedCategory.Description
-			json.NewEncoder(w).Encode(Categories[i])
-			return
-		}
-	}
+	// initialize repositories
+	categoryRepo := repository.NewCategoryRepository(db.DB)
+	productRepo := repository.NewProductRepository(db.DB)
 
-	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "Category not found"})
-}
+	// initialize services
+	categoryService := services.NewCategoryService(categoryRepo)
+	productService := services.NewProductService(productRepo, categoryRepo)
 
-func deleteCategory(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/api/categories/")
-	id, err := strconv.Atoi(path)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid category ID"})
-		return
-	}
+	// initialize HTTP Handlers
+	categoryHandler := handlers.NewCategoryHandler(categoryService)
+	productHandler := handlers.NewProductHandler(productService)
 
-	for i, p := range Categories {
-		if p.ID == id {
-			Categories = append(Categories[:i], Categories[i+1:]...)
-			w.Header().Set("Content-Type", "application/json")
+	// setup routes
+	// health check endpoint
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+
+		if err := db.HealthCheck(); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
 			json.NewEncoder(w).Encode(map[string]string{
-				"message": "success deleting a category",
+				"status":  "error",
+				"message": "Database connection failed",
 			})
 			return
 		}
-	}
 
-	w.WriteHeader(http.StatusNotFound)
-	json.NewEncoder(w).Encode(map[string]string{"error": "Category not found"})
-}
-
-func createCategory(w http.ResponseWriter, r *http.Request) {
-	// Implementation for creating a new category
-	w.Header().Set("Content-Type", "application/json")
-	var newCategory Category
-	if err := json.NewDecoder(r.Body).Decode(&newCategory); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request payload"})
-		return
-	}
-	newCategory.ID = len(Categories) + 1
-	Categories = append(Categories, newCategory)
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newCategory)
-
-}
-
-func main() {
-
-	// Health Check Endpoint
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
 			"status":  "ok",
-			"message": "Category service is running",
+			"message": "Gocats services is running",
 		})
+
 	})
 
 	http.HandleFunc("/api/categories", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			getCategories(w)
-		} else if r.Method == http.MethodPost {
-			createCategory(w, r)
+		switch r.Method {
+		case http.MethodGet:
+			categoryHandler.GetAllCategories(w, r)
+		case http.MethodPost:
+			categoryHandler.CreateCategory(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 
 	http.HandleFunc("/api/categories/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			getCategoryByID(w, r)
-		} else if r.Method == http.MethodPut {
-			updateCategory(w, r)
-		} else if r.Method == http.MethodDelete {
-			deleteCategory(w, r)
+		switch r.Method {
+		case http.MethodGet:
+			categoryHandler.GetCategoryByID(w, r)
+		case http.MethodPut:
+			categoryHandler.UpdateCategory(w, r)
+		case http.MethodDelete:
+			categoryHandler.DeleteCategory(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
 
-	fmt.Println("Server starting on port 6000...")
-	if err := http.ListenAndServe(":6000", nil); err != nil {
-		fmt.Printf("HTTP server failed: %v\n", err)
+	// Product routes
+	http.HandleFunc("/api/products", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// Check if filtering by category
+			if r.URL.Query().Get("category_id") != "" {
+				productHandler.GetProductsByCategoryID(w, r)
+			} else {
+				productHandler.GetAllProducts(w, r)
+			}
+		case http.MethodPost:
+			productHandler.CreateProduct(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/products/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			productHandler.GetProductByID(w, r)
+		case http.MethodPut:
+			productHandler.UpdateProduct(w, r)
+		case http.MethodDelete:
+			productHandler.DeleteProduct(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Start server
+	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
+	log.Printf("🚀 Server starting on %s...", addr)
+	if err := http.ListenAndServe(":"+cfg.Server.Port, nil); err != nil {
+		log.Fatalf("❌ HTTP server failed: %v", err)
 	}
+
 }
