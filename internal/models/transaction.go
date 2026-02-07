@@ -13,3 +13,14 @@ type Transaction struct {
 func (Transaction) TableName() string {
 	return "transactions"
 }
+
+// CheckoutItem represents a single item in the checkout request
+type CheckoutItem struct {
+	ProductID int `json:"product_id"`
+	Quantity  int `json:"quantity"`
+}
+
+// CheckoutRequest represents the checkout request payload
+type CheckoutRequest struct {
+	Items []CheckoutItem `json:"items"`
+}
