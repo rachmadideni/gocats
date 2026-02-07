@@ -82,3 +82,6 @@ Content-Type: application/json
     }
   ]
 }
+
+### Get today's sales summary
+GET http://localhost:6000/api/report/today

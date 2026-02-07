@@ -11,6 +11,7 @@ type TransactionRepository interface {
 	CreateTransactionDetail(tx *gorm.DB, detail *models.TransactionDetail) error
 	UpdateProductStock(tx *gorm.DB, productID uint, quantity int) error
 	FindByID(id uint) (*models.Transaction, error)
+	GetTodaySummary() (*models.SalesSummary, error)
 }
 
 type transactionRepository struct {
@@ -40,4 +41,50 @@ func (r *transactionRepository) FindByID(id uint) (*models.Transaction, error) {
 		return nil, err
 	}
 	return &transaction, nil
+}
+
+func (r *transactionRepository) GetTodaySummary() (*models.SalesSummary, error) {
+	var summary models.SalesSummary
+
+	// Get total revenue and total transactions for today
+	err := r.db.Model(&models.Transaction{}).
+		Select("COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(*) as total_transactions").
+		Where("DATE(created_at) = CURRENT_DATE").
+		Scan(&summary).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Get best selling product for today
+	type BestProduct struct {
+		ProductID uint
+		Name      string
+		QtySold   int
+	}
+
+	var bestProduct BestProduct
+	err = r.db.Model(&models.TransactionDetail{}).
+		Select("transaction_details.product_id, products.name, SUM(transaction_details.quantity) as qty_sold").
+		Joins("JOIN transactions ON transactions.id = transaction_details.transaction_id").
+		Joins("JOIN products ON products.id = transaction_details.product_id").
+		Where("DATE(transactions.created_at) = CURRENT_DATE").
+		Group("transaction_details.product_id, products.name").
+		Order("qty_sold DESC").
+		Limit(1).
+		Scan(&bestProduct).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	// Set best selling product if found
+	if bestProduct.ProductID != 0 {
+		summary.BestSellingProduct = &models.BestSellingProduct{
+			Name:    bestProduct.Name,
+			QtySold: bestProduct.QtySold,
+		}
+	}
+
+	return &summary, nil
 }

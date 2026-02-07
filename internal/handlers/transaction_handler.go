@@ -56,3 +56,15 @@ func (h *TransactionHandler) GetTransactionByID(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(transaction)
 }
+
+func (h *TransactionHandler) GetTodaySalesSummary(w http.ResponseWriter, r *http.Request) {
+	summary, err := h.service.GetTodaySalesSummary()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summary)
+}

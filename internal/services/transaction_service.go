@@ -12,6 +12,7 @@ import (
 type TransactionService interface {
 	Checkout(request models.CheckoutRequest) (*models.Transaction, error)
 	GetTransactionByID(id uint) (*models.Transaction, error)
+	GetTodaySalesSummary() (*models.SalesSummary, error)
 }
 
 type transactionService struct {
@@ -111,4 +112,12 @@ func (s *transactionService) GetTransactionByID(id uint) (*models.Transaction, e
 		return nil, errors.New("transaction not found")
 	}
 	return transaction, nil
+}
+
+func (s *transactionService) GetTodaySalesSummary() (*models.SalesSummary, error) {
+	summary, err := s.transRepo.GetTodaySummary()
+	if err != nil {
+		return nil, err
+	}
+	return summary, nil
 }
