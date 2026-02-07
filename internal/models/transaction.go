@@ -33,7 +33,7 @@ type BestSellingProduct struct {
 
 // SalesSummary represents the sales summary response
 type SalesSummary struct {
-	TotalRevenue       float64             `json:"total_revenue"`
-	TotalTransactions  int                 `json:"total_transactions"`
-	BestSellingProduct *BestSellingProduct `json:"best_selling_product,omitempty"`
+	TotalRevenue       float64             `gorm:"-" json:"total_revenue"`
+	TotalTransactions  int                 `gorm:"-" json:"total_transactions"`
+	BestSellingProduct *BestSellingProduct `gorm:"-" json:"best_selling_product,omitempty"`
 }

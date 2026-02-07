@@ -48,14 +48,23 @@ func (r *transactionRepository) GetTodaySummary() (*models.SalesSummary, error) 
 	var summary models.SalesSummary
 
 	// Get total revenue and total transactions for today
+	type Result struct {
+		TotalRevenue      float64
+		TotalTransactions int
+	}
+	var result Result
+
 	err := r.db.Model(&models.Transaction{}).
-		Select("COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(*) as total_transactions").
+		Select("COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(id) as total_transactions").
 		Where("DATE(created_at) = CURRENT_DATE").
-		Scan(&summary).Error
+		Scan(&result).Error
 
 	if err != nil {
 		return nil, err
 	}
+
+	summary.TotalRevenue = result.TotalRevenue
+	summary.TotalTransactions = result.TotalTransactions
 
 	// Get best selling product for today
 	type BestProduct struct {
@@ -94,14 +103,23 @@ func (r *transactionRepository) GetSummaryByDateRange(startDate, endDate string)
 	var summary models.SalesSummary
 
 	// Get total revenue and total transactions for date range
+	type Result struct {
+		TotalRevenue      float64
+		TotalTransactions int
+	}
+	var result Result
+
 	err := r.db.Model(&models.Transaction{}).
-		Select("COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(*) as total_transactions").
+		Select("COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(id) as total_transactions").
 		Where("DATE(created_at) >= ? AND DATE(created_at) <= ?", startDate, endDate).
-		Scan(&summary).Error
+		Scan(&result).Error
 
 	if err != nil {
 		return nil, err
 	}
+
+	summary.TotalRevenue = result.TotalRevenue
+	summary.TotalTransactions = result.TotalTransactions
 
 	// Get best selling product for date range
 	type BestProduct struct {
