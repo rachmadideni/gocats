@@ -37,14 +37,17 @@ func main() {
 	// initialize repositories
 	categoryRepo := repository.NewCategoryRepository(db.DB)
 	productRepo := repository.NewProductRepository(db.DB)
+	transactionRepo := repository.NewTransactionRepository(db.DB)
 
 	// initialize services
 	categoryService := services.NewCategoryService(categoryRepo)
 	productService := services.NewProductService(productRepo, categoryRepo)
+	transactionService := services.NewTransactionService(db.DB, transactionRepo, productRepo)
 
 	// initialize HTTP Handlers
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	productHandler := handlers.NewProductHandler(productService)
+	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
 	// setup routes
 	// health check endpoint
@@ -116,6 +119,35 @@ func main() {
 			productHandler.UpdateProduct(w, r)
 		case http.MethodDelete:
 			productHandler.DeleteProduct(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Transaction routes
+	http.HandleFunc("/api/checkout", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			transactionHandler.Checkout(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Report routes
+	http.HandleFunc("/api/report/today", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			transactionHandler.GetTodaySalesSummary(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/api/report", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			transactionHandler.GetSalesSummaryByDateRange(w, r)
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
