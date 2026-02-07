@@ -85,3 +85,6 @@ Content-Type: application/json
 
 ### Get today's sales summary
 GET http://localhost:6000/api/report/today
+
+### Get sales summary by date range
+GET http://localhost:6000/api/report?start_date=2026-01-01&end_date=2026-02-01

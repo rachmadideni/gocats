@@ -13,6 +13,7 @@ type TransactionService interface {
 	Checkout(request models.CheckoutRequest) (*models.Transaction, error)
 	GetTransactionByID(id uint) (*models.Transaction, error)
 	GetTodaySalesSummary() (*models.SalesSummary, error)
+	GetSalesSummaryByDateRange(startDate, endDate string) (*models.SalesSummary, error)
 }
 
 type transactionService struct {
@@ -116,6 +117,18 @@ func (s *transactionService) GetTransactionByID(id uint) (*models.Transaction, e
 
 func (s *transactionService) GetTodaySalesSummary() (*models.SalesSummary, error) {
 	summary, err := s.transRepo.GetTodaySummary()
+	if err != nil {
+		return nil, err
+	}
+	return summary, nil
+}
+
+func (s *transactionService) GetSalesSummaryByDateRange(startDate, endDate string) (*models.SalesSummary, error) {
+	if startDate == "" || endDate == "" {
+		return nil, errors.New("start_date and end_date are required")
+	}
+
+	summary, err := s.transRepo.GetSummaryByDateRange(startDate, endDate)
 	if err != nil {
 		return nil, err
 	}

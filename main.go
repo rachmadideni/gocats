@@ -144,6 +144,15 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/api/report", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			transactionHandler.GetSalesSummaryByDateRange(w, r)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("🚀 Server starting on %s...", addr)
