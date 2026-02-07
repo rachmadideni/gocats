@@ -66,3 +66,19 @@ Content-Type: application/json
 ### Delete a product by ID
 DELETE http://localhost:6000/api/products/1
 
+### Checkout transaction
+POST http://localhost:6000/api/checkout
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2
+    },
+    {
+      "product_id": 2,
+      "quantity": 1
+    }
+  ]
+}
