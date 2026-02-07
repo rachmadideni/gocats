@@ -42,6 +42,9 @@ Content-Type: application/json
 ### Get all products (with category name)
 GET http://localhost:6000/api/products
 
+### Get products by name (filter)
+GET http://localhost:6000/api/products?name=iPhone
+
 ### Get single product by ID
 GET http://localhost:6000/api/products/1
 
